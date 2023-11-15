@@ -1,5 +1,9 @@
-import type { ActionFunctionArgs } from "@remix-run/cloudflare";
-import { Form, useActionData } from "@remix-run/react";
+import {
+  json,
+  type ActionFunctionArgs,
+  type LoaderFunctionArgs,
+} from "@remix-run/cloudflare";
+import { Form, useActionData, useLoaderData } from "@remix-run/react";
 import bcrypt from "bcryptjs";
 
 export function meta() {
@@ -7,6 +11,10 @@ export function meta() {
     { title: "New Remix App" },
     { name: "description", content: "Welcome to Remix!" },
   ];
+}
+
+export async function loader({ context }: LoaderFunctionArgs) {
+  return json({ users: await context.db.query.users.findMany() });
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -20,6 +28,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Index() {
+  const { users } = useLoaderData<typeof loader>();
   const hashed = useActionData<typeof action>();
 
   return (
@@ -31,6 +40,12 @@ export default function Index() {
         <button>Sign up</button>
       </Form>
       {hashed && <p>{hashed}</p>}
+
+      <ul>
+        {users.map((user) => (
+          <li key={user.id}>{user.password}</li>
+        ))}
+      </ul>
     </div>
   );
 }
