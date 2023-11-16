@@ -1,6 +1,6 @@
 name = "fm-link-sharing"
-compatibility_date = "2023-11-14"
-node_compat = true
+compatibility_date = "2023-01-01"
+compatibility_flags = ["nodejs_compat"]
 
 [[ d1_databases ]]
 binding = "DB"

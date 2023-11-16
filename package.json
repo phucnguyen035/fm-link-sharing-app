@@ -1,53 +1,53 @@
 {
-	"name": "my-remix-app",
-	"private": true,
-	"sideEffects": false,
-	"type": "module",
-	"scripts": {
-		"build": "remix build",
-		"dev": "remix dev --manual -c \"npm run start\"",
-		"start": "wrangler pages dev ./public",
-		"typecheck": "tsc",
-		"pages:deploy": "pnpm run build && wrangler pages deploy ./public"
-	},
-	"dependencies": {
-		"@radix-ui/react-avatar": "^1.0.4",
-		"@radix-ui/react-label": "^2.0.2",
-		"@radix-ui/react-select": "^2.0.0",
-		"@radix-ui/react-slot": "^1.0.2",
-		"@radix-ui/react-toast": "^1.1.5",
-		"@remix-run/cloudflare": "^2.2.0",
-		"@remix-run/cloudflare-pages": "^2.2.0",
-		"@remix-run/css-bundle": "^2.2.0",
-		"@remix-run/react": "^2.2.0",
-		"bcryptjs": "^2.4.3",
-		"class-variance-authority": "^0.7.0",
-		"clsx": "^2.0.0",
-		"drizzle-orm": "^0.29.0",
-		"isbot": "^3.6.8",
-		"lucide-react": "^0.292.0",
-		"react": "^18.2.0",
-		"react-dom": "^18.2.0",
-		"tailwind-merge": "^2.0.0",
-		"tailwindcss-animate": "^1.0.7"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20230518.0",
-		"@remix-run/dev": "^2.2.0",
-		"@remix-run/eslint-config": "^2.2.0",
-		"@types/bcryptjs": "^2.4.6",
-		"@types/react": "^18.2.20",
-		"@types/react-dom": "^18.2.7",
-		"autoprefixer": "^10.4.16",
-		"drizzle-kit": "^0.20.2",
-		"eslint": "^8.38.0",
-		"prettier": "^3.1.0",
-		"prettier-plugin-tailwindcss": "^0.5.7",
-		"tailwindcss": "^3.3.5",
-		"typescript": "^5.1.0",
-		"wrangler": "^3.1.1"
-	},
-	"engines": {
-		"node": ">=18.0.0"
-	}
+  "name": "my-remix-app",
+  "private": true,
+  "sideEffects": false,
+  "type": "module",
+  "scripts": {
+    "build": "remix build",
+    "dev": "remix dev --manual -c \"npm run start\"",
+    "start": "wrangler pages dev ./public --compatibility-date=2023-01-01 --compatibility-flag=\"nodejs_compat\"",
+    "typecheck": "tsc",
+    "pages:deploy": "pnpm run build && wrangler pages deploy ./public"
+  },
+  "dependencies": {
+    "@radix-ui/react-avatar": "^1.0.4",
+    "@radix-ui/react-label": "^2.0.2",
+    "@radix-ui/react-select": "^2.0.0",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-toast": "^1.1.5",
+    "@remix-run/cloudflare": "^2.2.0",
+    "@remix-run/cloudflare-pages": "^2.2.0",
+    "@remix-run/css-bundle": "^2.2.0",
+    "@remix-run/react": "^2.2.0",
+    "bcryptjs": "^2.4.3",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
+    "drizzle-orm": "^0.29.0",
+    "isbot": "^3.6.8",
+    "lucide-react": "^0.292.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwind-merge": "^2.0.0",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20230518.0",
+    "@remix-run/dev": "^2.2.0",
+    "@remix-run/eslint-config": "^2.2.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/react": "^18.2.20",
+    "@types/react-dom": "^18.2.7",
+    "autoprefixer": "^10.4.16",
+    "drizzle-kit": "^0.20.2",
+    "eslint": "^8.38.0",
+    "prettier": "^3.1.0",
+    "prettier-plugin-tailwindcss": "^0.5.7",
+    "tailwindcss": "^3.3.5",
+    "typescript": "^5.1.0",
+    "wrangler": "^3.1.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
