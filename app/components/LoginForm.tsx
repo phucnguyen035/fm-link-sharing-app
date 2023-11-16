@@ -23,6 +23,7 @@ export default function LoginForm({ errors }: Props) {
 				<div>
 					<Label htmlFor="email">Email address</Label>
 					<Input
+						required
 						id="email"
 						type="email"
 						placeholder="e.g. alex@email.com"
@@ -35,6 +36,7 @@ export default function LoginForm({ errors }: Props) {
 				<div>
 					<Label htmlFor="password">Password</Label>
 					<Input
+						required
 						minLength={8}
 						id="password"
 						type="password"
