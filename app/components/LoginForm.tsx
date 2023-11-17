@@ -29,7 +29,6 @@ export default function LoginForm({ errors }: Props) {
 						placeholder="e.g. alex@email.com"
 						name="email"
 						icon={<MailIcon className="h-4 w-4 text-muted-foreground" />}
-						aria-invalid={errors?.email ? true : undefined}
 					/>
 					{errors?.email && <span className="text-xs text-destructive">{errors.email}</span>}
 				</div>
