@@ -1,8 +1,12 @@
 name = "fm-link-sharing"
 compatibility_date = "2023-01-01"
 compatibility_flags = ["nodejs_compat"]
+kv_namespaces = [
+	{ binding = "KV_FM_LINK_SHARING", preview_id = "e3ea14f824094393b70665f4d8e3832c", id = "b87e4566bd0646b3988abdbc0bd678c7" }
+]
 
 [[ d1_databases ]]
 binding = "DB"
 database_name = "fm_link_sharing"
 database_id = "35ec0f36-c359-43f5-ae94-f45d52f35a4f"
+
