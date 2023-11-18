@@ -15,7 +15,7 @@ declare module '@remix-run/cloudflare' {
 interface ENV {
 	SESSION_SECRET: string;
 	DB: D1Database;
-	KV_FM_LINK_SHARING: KVNamespace;
+	SESSIONS: KVNamespace;
 }
 
 if (process.env.NODE_ENV === 'development') {
@@ -33,7 +33,7 @@ export const onRequest = createPagesFunctionHandler({
 				logger: process.env.NODE_ENV === 'development',
 			}),
 			sessions: createWorkersKVSessionStorage({
-				kv: env.KV_FM_LINK_SHARING,
+				kv: env.KV_SESSIONS,
 				cookie: createCookie('__session', {
 					httpOnly: true,
 					secure: process.env.NODE_ENV === 'production',
