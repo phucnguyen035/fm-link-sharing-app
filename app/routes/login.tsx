@@ -1,6 +1,10 @@
 import { Form, Link, useActionData } from '@remix-run/react';
-import { type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-run/cloudflare';
-import { createSession, json, redirect } from '@remix-run/cloudflare';
+import {
+	json,
+	redirect,
+	type ActionFunctionArgs,
+	type LoaderFunctionArgs,
+} from '@remix-run/cloudflare';
 import { compare } from 'bcryptjs';
 import { LockIcon, MailIcon } from 'lucide-react';
 import { z } from 'zod';
@@ -24,8 +28,12 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
-	let userId = 0;
 	const { db, sessions } = context;
+	const session = await sessions.getSession(request.headers.get('Cookie'));
+	if (session.has('userId')) {
+		return redirect('/');
+	}
+
 	const formData = await request.formData();
 	const schema = z
 		.object({
@@ -46,7 +54,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 				return false;
 			}
 
-			userId = user.id;
+			session.set('userId', user.id);
 
 			return true;
 		}, 'Unable to login');
@@ -55,12 +63,6 @@ export async function action({ request, context }: ActionFunctionArgs) {
 	if (!result.success) {
 		return json({ errors: result.error.flatten() }, { status: 400 });
 	}
-
-	if (!userId) {
-		throw new Error(`Unable to assign user id`);
-	}
-
-	const session = createSession({ userId });
 
 	return redirect('/', {
 		headers: {
