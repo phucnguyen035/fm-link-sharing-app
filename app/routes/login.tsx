@@ -49,7 +49,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 			userId = user.id;
 
 			return true;
-		});
+		}, 'Unable to login');
 
 	const result = await schema.spa(Object.fromEntries(formData));
 	if (!result.success) {
