@@ -12,7 +12,7 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
 
 export default function AuthLayout() {
 	return (
-		<main className="grid min-h-screen place-items-center bg-muted">
+		<main className="grid h-screen place-items-center md:bg-muted">
 			<div className="w-full max-w-md">
 				<Outlet />
 			</div>

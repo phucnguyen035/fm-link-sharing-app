@@ -1,0 +1,118 @@
+import { Form, Link, useActionData } from '@remix-run/react';
+import { json, redirect, type ActionFunctionArgs } from '@remix-run/cloudflare';
+import { compare } from 'bcryptjs';
+import { LockIcon, MailIcon } from 'lucide-react';
+import { z } from 'zod';
+import { Button } from '~/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
+import { Input } from '~/components/ui/input';
+import { Label } from '~/components/ui/label';
+
+export function meta() {
+	return [{ title: 'Login' }, { name: 'description', content: 'Login to Link Sharing App' }];
+}
+
+export async function action({ request, context }: ActionFunctionArgs) {
+	const { db, sessions } = context;
+	const session = await sessions.getSession(request.headers.get('Cookie'));
+	if (session.has('userId')) {
+		return redirect('/');
+	}
+
+	const formData = await request.formData();
+	const schema = z
+		.object({
+			email: z.string().email(),
+			password: z.string(),
+		})
+		.refine(async ({ email, password }) => {
+			const user = await db.query.users.findFirst({
+				columns: { id: true, password: true },
+				where: (users, { eq }) => eq(users.email, email),
+			});
+			if (!user) {
+				return false;
+			}
+
+			const isPasswordValid = await compare(password, user.password);
+			if (!isPasswordValid) {
+				return false;
+			}
+
+			session.set('userId', user.id);
+
+			return true;
+		}, 'Unable to login');
+
+	const result = await schema.spa(Object.fromEntries(formData));
+	if (!result.success) {
+		return json({ errors: result.error.flatten() }, { status: 400 });
+	}
+
+	return redirect('/', {
+		headers: {
+			'set-cookie': await sessions.commitSession(session),
+		},
+	});
+}
+
+export default function LoginPage() {
+	const data = useActionData<typeof action>();
+
+	return (
+		<Form method="POST">
+			<Card className="h-screen rounded-sm md:h-full">
+				<CardHeader>
+					<CardTitle>Login</CardTitle>
+					<CardDescription>Add your details below to get back into the app</CardDescription>
+				</CardHeader>
+				<CardContent className="grid gap-y-4">
+					<div>
+						<Label htmlFor="email">Email address</Label>
+						<Input
+							required
+							id="email"
+							type="email"
+							placeholder="e.g. alex@email.com"
+							name="email"
+							icon={<MailIcon className="h-4 w-4 text-muted-foreground" />}
+							error={data?.errors.fieldErrors.email || data?.errors.formErrors}
+						/>
+						{data?.errors.fieldErrors.email && (
+							<span className="text-xs text-destructive">{data.errors.fieldErrors.email[0]}</span>
+						)}
+					</div>
+					<div>
+						<Label htmlFor="password">Password</Label>
+						<Input
+							required
+							id="password"
+							type="password"
+							placeholder="Enter your password"
+							name="password"
+							icon={<LockIcon className="h-4 w-4 text-muted-foreground" />}
+							error={data?.errors.fieldErrors.password || data?.errors.formErrors}
+						/>
+						{data?.errors.fieldErrors.password && (
+							<span className="text-xs text-destructive">
+								{data.errors.fieldErrors.password?.[0]}
+							</span>
+						)}
+					</div>
+					{data?.errors.formErrors && (
+						<span className="text-xs text-destructive">{data.errors.formErrors[0]}</span>
+					)}
+					<Button type="submit" className="w-full">
+						Login
+					</Button>
+					<p className="text-center">
+						Don't have an account?{' '}
+						<Link to="/register" className="block text-primary md:inline">
+							Create account
+						</Link>
+					</p>
+				</CardContent>
+			</Card>
+		</Form>
+	);
+}
