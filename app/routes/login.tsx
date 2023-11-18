@@ -1,6 +1,7 @@
+import { Form, Link, useActionData } from '@remix-run/react';
 import { type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-run/cloudflare';
 import { createSession, json, redirect } from '@remix-run/cloudflare';
-import { Form, Link, useActionData, useLoaderData } from '@remix-run/react';
+import { compare } from 'bcryptjs';
 import { LockIcon, MailIcon } from 'lucide-react';
 import { z } from 'zod';
 import { Button } from '~/components/ui/button';
@@ -8,22 +9,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/com
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
 
-const MIN_PASSWORD_LENGTH = 8;
-
 export function meta() {
-	return [{ title: 'New Remix App' }, { name: 'description', content: 'Welcome to Remix!' }];
+	return [{ title: 'Login' }, { name: 'description', content: 'Login to Link Sharing App' }];
 }
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
 	const session = await context.sessions.getSession(request.headers.get('Cookie'));
-	if (!session.id) {
-		return redirect('/login');
+
+	if (session.id) {
+		return redirect('/');
 	}
 
-	return json({ users: await context.db.query.users.findMany() });
+	return null;
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
+	let userId = 0;
 	const { db, sessions } = context;
 	const formData = await request.formData();
 	const schema = z
@@ -31,21 +32,35 @@ export async function action({ request, context }: ActionFunctionArgs) {
 			email: z.string().email(),
 			password: z.string(),
 		})
-		.refine(async ({ email }) => {
+		.refine(async ({ email, password }) => {
 			const user = await db.query.users.findFirst({
-				columns: { id: true },
+				columns: { id: true, password: true },
 				where: (users, { eq }) => eq(users.email, email),
 			});
+			if (!user) {
+				return false;
+			}
 
-			return !!user;
-		}, 'Unable to login');
+			const isPasswordValid = await compare(password, user.password);
+			if (!isPasswordValid) {
+				return false;
+			}
+
+			userId = user.id;
+
+			return true;
+		});
 
 	const result = await schema.spa(Object.fromEntries(formData));
 	if (!result.success) {
 		return json({ errors: result.error.flatten() }, { status: 400 });
 	}
 
-	const session = createSession({ email: result.data.email });
+	if (!userId) {
+		throw new Error(`Unable to assign user id`);
+	}
+
+	const session = createSession({ userId });
 
 	return redirect('/', {
 		headers: {
@@ -54,8 +69,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 	});
 }
 
-export default function Index() {
-	const { users } = useLoaderData<typeof loader>();
+export default function LoginPage() {
 	const data = useActionData<typeof action>();
 
 	return (
@@ -86,7 +100,6 @@ export default function Index() {
 							<Label htmlFor="password">Password</Label>
 							<Input
 								required
-								minLength={MIN_PASSWORD_LENGTH}
 								id="password"
 								type="password"
 								placeholder="Enter your password"
@@ -104,7 +117,7 @@ export default function Index() {
 							<span className="text-xs text-destructive">{data.errors.formErrors[0]}</span>
 						)}
 						<Button type="submit" className="w-full">
-							Sign up
+							Login
 						</Button>
 						<p className="text-center">
 							Don't have an account?{' '}
@@ -115,12 +128,6 @@ export default function Index() {
 					</CardContent>
 				</Card>
 			</Form>
-
-			<ul>
-				{users.map((user) => (
-					<li key={user.id}>{user.password}</li>
-				))}
-			</ul>
 		</main>
 	);
 }
