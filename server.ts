@@ -33,7 +33,7 @@ export const onRequest = createPagesFunctionHandler({
 				logger: process.env.NODE_ENV === 'development',
 			}),
 			sessions: createWorkersKVSessionStorage({
-				kv: env.KV_SESSIONS,
+				kv: env.SESSIONS,
 				cookie: createCookie('__session', {
 					httpOnly: true,
 					secure: process.env.NODE_ENV === 'production',
