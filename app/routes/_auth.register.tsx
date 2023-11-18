@@ -25,6 +25,10 @@ export async function action({ request, context }: ActionFunctionArgs) {
 			password: z.string().min(MIN_PASSWORD_LENGTH),
 			confirmPassword: z.string().min(MIN_PASSWORD_LENGTH),
 		})
+		.refine((data) => data.password === data.confirmPassword, {
+			path: ['confirmPassword'],
+			message: 'Passwords do not match',
+		})
 		.refine(async ({ email }) => {
 			const user = await db.query.users.findFirst({
 				columns: { id: true },
@@ -59,6 +63,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 
 export default function RegisterPage() {
 	const data = useActionData<typeof action>();
+	const hasFormErrors = !!data?.errors?.formErrors.length;
 
 	return (
 		<Form method="POST">
@@ -77,7 +82,7 @@ export default function RegisterPage() {
 							placeholder="e.g. alex@email.com"
 							name="email"
 							icon={<MailIcon className="h-4 w-4 text-muted-foreground" />}
-							error={data?.errors.fieldErrors.email || data?.errors.formErrors}
+							error={data?.errors.fieldErrors.email || hasFormErrors}
 						/>
 						{data?.errors.fieldErrors.email && (
 							<span className="text-xs text-destructive">{data.errors.fieldErrors.email[0]}</span>
@@ -93,7 +98,7 @@ export default function RegisterPage() {
 							placeholder="At least 8 characters"
 							name="password"
 							icon={<LockIcon className="h-4 w-4 text-muted-foreground" />}
-							error={data?.errors.fieldErrors.password || data?.errors.formErrors}
+							error={data?.errors.fieldErrors.password || hasFormErrors}
 						/>
 						{data?.errors.fieldErrors.password && (
 							<span className="text-xs text-destructive">
@@ -111,15 +116,15 @@ export default function RegisterPage() {
 							placeholder="At least 8 characters"
 							name="confirmPassword"
 							icon={<LockIcon className="h-4 w-4 text-muted-foreground" />}
-							error={data?.errors.fieldErrors.password || data?.errors.formErrors}
+							error={data?.errors.fieldErrors.confirmPassword || hasFormErrors}
 						/>
-						{data?.errors.fieldErrors.password && (
+						{data?.errors.fieldErrors.confirmPassword && (
 							<span className="text-xs text-destructive">
-								{data.errors.fieldErrors.password?.[0]}
+								{data.errors.fieldErrors.confirmPassword?.[0]}
 							</span>
 						)}
 					</div>
-					{data?.errors.formErrors && (
+					{hasFormErrors && (
 						<span className="text-xs text-destructive">{data.errors.formErrors[0]}</span>
 					)}
 					<Button type="submit" className="w-full">
