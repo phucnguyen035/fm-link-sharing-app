@@ -38,9 +38,14 @@ export const onRequest = createPagesFunctionHandler({
 					httpOnly: true,
 					secure: process.env.NODE_ENV === 'production',
 					secrets: [env.SESSION_SECRET],
+					expires: getFutureDate(7),
 				}),
 			}),
 		};
 	},
 	mode: build.mode,
 });
+
+function getFutureDate(days: number) {
+	return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+}
