@@ -1,29 +1,63 @@
-import { type LoaderFunctionArgs } from '@remix-run/cloudflare';
-import { json, redirect } from '@remix-run/cloudflare';
-import { Form, Link, useActionData, useLoaderData } from '@remix-run/react';
+import { json, redirect, type ActionFunctionArgs } from '@remix-run/cloudflare';
+import { Form, Link, useActionData } from '@remix-run/react';
+import { hash } from 'bcryptjs';
 import { LockIcon, MailIcon } from 'lucide-react';
+import { z } from 'zod';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
+import { users } from '~/schemas/users';
 
 const MIN_PASSWORD_LENGTH = 8;
 
-export function meta() {
-	return [{ title: 'New Remix App' }, { name: 'description', content: 'Welcome to Remix!' }];
-}
-
-export async function loader({ context, request }: LoaderFunctionArgs) {
-	const session = await context.sessions.getSession(request.headers.get('Cookie'));
-	if (!session.has('userId')) {
-		return redirect('/login');
+export async function action({ request, context }: ActionFunctionArgs) {
+	const { db, sessions } = context;
+	const session = await sessions.getSession(request.headers.get('Cookie'));
+	if (session.has('userId')) {
+		return redirect('/');
 	}
 
-	return json({ users: await context.db.query.users.findMany() });
+	const formData = await request.formData();
+	const schema = z
+		.object({
+			email: z.string().email(),
+			password: z.string().min(MIN_PASSWORD_LENGTH),
+		})
+		.refine(async ({ email }) => {
+			const user = await db.query.users.findFirst({
+				columns: { id: true },
+				where: (users, { eq }) => eq(users.email, email),
+			});
+
+			return !user;
+		}, 'Failed to sign up');
+
+	const result = await schema.spa(Object.fromEntries(formData));
+	if (!result.success) {
+		return json({ errors: result.error.flatten() }, { status: 400 });
+	}
+
+	const hashedPassword = await hash(result.data.password, 8);
+	const [{ id }] = await db
+		.insert(users)
+		.values({
+			email: result.data.email,
+			password: hashedPassword,
+		})
+		.returning({ id: users.id });
+
+	session.set('userId', id);
+
+	return redirect('/', {
+		headers: {
+			'set-cookie': await sessions.commitSession(session),
+		},
+	});
 }
 
-export default function Index() {
-	const { users } = useLoaderData<typeof loader>();
+export default function RegisterPage() {
+	const data = useActionData<typeof action>();
 
 	return (
 		<main>
@@ -82,12 +116,6 @@ export default function Index() {
 					</CardContent>
 				</Card>
 			</Form>
-
-			<ul>
-				{users.map((user) => (
-					<li key={user.id}>{user.password}</li>
-				))}
-			</ul>
 		</main>
 	);
 }
