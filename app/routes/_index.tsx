@@ -1,16 +1,15 @@
 import { type LoaderFunctionArgs } from '@remix-run/cloudflare';
 import { json, redirect } from '@remix-run/cloudflare';
-import { Form, Link, useActionData, useLoaderData } from '@remix-run/react';
-import { LockIcon, MailIcon } from 'lucide-react';
-import { Button } from '~/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
-import { Input } from '~/components/ui/input';
-import { Label } from '~/components/ui/label';
-
-const MIN_PASSWORD_LENGTH = 8;
+import { useLoaderData } from '@remix-run/react';
 
 export function meta() {
-	return [{ title: 'New Remix App' }, { name: 'description', content: 'Welcome to Remix!' }];
+	return [
+		{ title: 'Link Sharing App [FM]' },
+		{
+			name: 'description',
+			content: 'Welcome to Link Sharing App, a project from Frontend Mentor!',
+		},
+	];
 }
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
@@ -27,62 +26,6 @@ export default function Index() {
 
 	return (
 		<main>
-			<Form method="POST">
-				<Card className="mx-auto max-w-md rounded-sm">
-					<CardHeader>
-						<CardTitle>Login</CardTitle>
-						<CardDescription>Add your details below to get back into the app</CardDescription>
-					</CardHeader>
-					<CardContent className="grid gap-y-4">
-						<div>
-							<Label htmlFor="email">Email address</Label>
-							<Input
-								required
-								id="email"
-								type="email"
-								placeholder="e.g. alex@email.com"
-								name="email"
-								icon={<MailIcon className="h-4 w-4 text-muted-foreground" />}
-								error={data?.errors.fieldErrors.email || data?.errors.formErrors}
-							/>
-							{data?.errors.fieldErrors.email && (
-								<span className="text-xs text-destructive">{data.errors.fieldErrors.email[0]}</span>
-							)}
-						</div>
-						<div>
-							<Label htmlFor="password">Password</Label>
-							<Input
-								required
-								minLength={MIN_PASSWORD_LENGTH}
-								id="password"
-								type="password"
-								placeholder="Enter your password"
-								name="password"
-								icon={<LockIcon className="h-4 w-4 text-muted-foreground" />}
-								error={data?.errors.fieldErrors.password || data?.errors.formErrors}
-							/>
-							{data?.errors.fieldErrors.password && (
-								<span className="text-xs text-destructive">
-									{data.errors.fieldErrors.password?.[0]}
-								</span>
-							)}
-						</div>
-						{data?.errors.formErrors && (
-							<span className="text-xs text-destructive">{data.errors.formErrors[0]}</span>
-						)}
-						<Button type="submit" className="w-full">
-							Sign up
-						</Button>
-						<p className="text-center">
-							Don't have an account?{' '}
-							<Link to="/register" className="text-primary">
-								Create account
-							</Link>
-						</p>
-					</CardContent>
-				</Card>
-			</Form>
-
 			<ul>
 				{users.map((user) => (
 					<li key={user.id}>{user.password}</li>
