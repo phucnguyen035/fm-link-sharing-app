@@ -1,10 +1,11 @@
 import { redirect, type LoaderFunctionArgs } from '@remix-run/cloudflare';
 import { Outlet } from '@remix-run/react';
 import Logo from '~/components/Logo';
+import { getUserId } from '~/session.server';
 
 export async function loader({ request, context }: LoaderFunctionArgs) {
-	const session = await context.sessions.getSession(request.headers.get('Cookie'));
-	if (session.has('userId')) {
+	const userId = await getUserId(request, context.sessions);
+	if (userId) {
 		return redirect('/');
 	}
 
