@@ -1,8 +1,7 @@
 import { type LoaderFunctionArgs } from '@remix-run/cloudflare';
-import { json, redirect } from '@remix-run/cloudflare';
+import { json } from '@remix-run/cloudflare';
 import { useLoaderData } from '@remix-run/react';
-import Logo from '~/components/Logo';
-import LogoIcon from '~/components/LogoIcon';
+import { requireUserId } from '~/session.server';
 
 export function meta() {
 	return [
@@ -15,11 +14,7 @@ export function meta() {
 }
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
-	const session = await context.sessions.getSession(request.headers.get('Cookie'));
-	const userId = session.get('userId');
-	if (!userId) {
-		return redirect('/login');
-	}
+	const userId = await requireUserId(request, context.sessions);
 
 	return json({ links: await context.repo.links.get(userId) });
 }
@@ -29,11 +24,6 @@ export default function Index() {
 
 	return (
 		<main>
-			<div className="flex">
-				<Logo className="hidden md:inline" />
-				<LogoIcon className="inline md:hidden" />
-			</div>
-
 			{links.length > 0 ? (
 				<ul>
 					{links.map((link) => (
