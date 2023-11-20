@@ -21,16 +21,7 @@ export async function loader({ context, request }: LoaderFunctionArgs) {
 		return redirect('/login');
 	}
 
-	const links = await context.db.query.links.findMany({
-		columns: {
-			type: true,
-			id: true,
-			url: true,
-		},
-		where: (links, { eq }) => eq(links.userId, userId),
-	});
-
-	return json({ links });
+	return json({ links: await context.repo.links.get(userId) });
 }
 
 export default function Index() {

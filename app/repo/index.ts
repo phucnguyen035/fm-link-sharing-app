@@ -11,7 +11,7 @@ export type Repository = {
 		verify(user: { email: string; password: string }): Promise<number | undefined>;
 	};
 	links: {
-		get(userId: number): Promise<Array<{ url: string; type: LinkType }>>;
+		get(userId: number): Promise<Array<{ id: number; url: string; type: LinkType }>>;
 	};
 };
 
@@ -70,6 +70,7 @@ function createLinkRepo(db: Database): Repository['links'] {
 		async get(userId) {
 			return await db
 				.select({
+					id: links.id,
 					url: links.url,
 					type: links.type,
 				})
