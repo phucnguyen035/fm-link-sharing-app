@@ -30,7 +30,7 @@ function createUserRepo(db: Database): Repository['users'] {
 	const { users } = schema;
 
 	return {
-		async create({ email, password }: { email: string; password: string }) {
+		async create({ email, password }) {
 			const user = await db
 				.insert(users)
 				.values({ email, password: await hash(password, 8) })
@@ -38,7 +38,7 @@ function createUserRepo(db: Database): Repository['users'] {
 
 			return user[0].id;
 		},
-		async exists(email: string) {
+		async exists(email) {
 			const user = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
 
 			return user.length > 0;
