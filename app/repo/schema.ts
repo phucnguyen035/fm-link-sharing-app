@@ -1,6 +1,6 @@
 import { integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 import { relations, sql } from 'drizzle-orm';
-import { linkTypes } from '~/constants';
+import { PLATFORMS } from '~/constants';
 
 export const users = sqliteTable('users', {
 	id: integer('id').primaryKey(),
@@ -19,7 +19,7 @@ export const links = sqliteTable(
 	{
 		id: integer('id').primaryKey(),
 		url: text('url').notNull(),
-		type: text('type', { enum: linkTypes }).notNull(),
+		platform: text('platform', { enum: PLATFORMS }).notNull(),
 		userId: integer('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
@@ -28,7 +28,7 @@ export const links = sqliteTable(
 			.default(sql`CURRENT_TIMESTAMP`),
 	},
 	(t) => ({
-		uniqueUserLinkType: unique().on(t.type, t.userId),
+		uniqueUserPlatform: unique().on(t.platform, t.userId),
 	}),
 );
 

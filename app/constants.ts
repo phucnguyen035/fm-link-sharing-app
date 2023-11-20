@@ -1,4 +1,4 @@
-export const linkTypes = [
+export const PLATFORMS = [
 	'github',
 	'twitter',
 	'frontendmentor',
@@ -15,4 +15,4 @@ export const linkTypes = [
 	'stackoverflow',
 ] as const;
 
-export type LinkType = (typeof linkTypes)[number];
+export type Platform = (typeof PLATFORMS)[number];
