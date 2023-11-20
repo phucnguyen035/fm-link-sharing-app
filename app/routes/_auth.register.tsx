@@ -1,18 +1,16 @@
 import { json, redirect, type ActionFunctionArgs } from '@remix-run/cloudflare';
 import { Form, Link, useActionData } from '@remix-run/react';
-import { hash } from 'bcryptjs';
 import { LockIcon, MailIcon } from 'lucide-react';
 import { z } from 'zod';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
-import { users } from '~/schemas';
 
 const MIN_PASSWORD_LENGTH = 8;
 
 export async function action({ request, context }: ActionFunctionArgs) {
-	const { db, sessions } = context;
+	const { sessions, repo } = context;
 	const session = await sessions.getSession(request.headers.get('Cookie'));
 	if (session.has('userId')) {
 		return redirect('/');
@@ -30,12 +28,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
 			message: 'Passwords do not match',
 		})
 		.refine(async ({ email }) => {
-			const user = await db.query.users.findFirst({
-				columns: { id: true },
-				where: (users, { eq }) => eq(users.email, email),
-			});
-
-			return !user;
+			const userExists = await repo.users.exists(email);
+			return !userExists;
 		}, 'Failed to sign up');
 
 	const result = await schema.spa(Object.fromEntries(formData));
@@ -43,16 +37,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
 		return json({ errors: result.error.flatten() }, { status: 400 });
 	}
 
-	const hashedPassword = await hash(result.data.password, 8);
-	const [{ id }] = await db
-		.insert(users)
-		.values({
-			email: result.data.email,
-			password: hashedPassword,
-		})
-		.returning({ id: users.id });
-
-	session.set('userId', id);
+	session.set('userId', await repo.users.create(result.data));
 
 	return redirect('/', {
 		headers: {

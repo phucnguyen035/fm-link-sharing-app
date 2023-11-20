@@ -1,13 +1,11 @@
 import { createCookie, createWorkersKVSessionStorage, logDevReady } from '@remix-run/cloudflare';
 import { createPagesFunctionHandler } from '@remix-run/cloudflare-pages';
 import * as build from '@remix-run/dev/server-build';
-import type { DrizzleD1Database } from 'drizzle-orm/d1';
-import { drizzle } from 'drizzle-orm/d1';
-import * as schema from '~/schemas';
+import { createRepository, type Repository } from '~/repo';
 
 declare module '@remix-run/cloudflare' {
 	interface AppLoadContext {
-		db: DrizzleD1Database<typeof schema>;
+		repo: Repository;
 		sessions: ReturnType<typeof createWorkersKVSessionStorage<{ userId: number }>>;
 	}
 }
@@ -27,11 +25,7 @@ export const onRequest = createPagesFunctionHandler({
 	getLoadContext: (context) => {
 		const env = context.env as ENV;
 		return {
-			env,
-			db: drizzle(env.DB, {
-				schema,
-				logger: process.env.NODE_ENV === 'development',
-			}),
+			repo: createRepository(env.DB),
 			sessions: createWorkersKVSessionStorage({
 				kv: env.SESSIONS,
 				cookie: createCookie('__session', {

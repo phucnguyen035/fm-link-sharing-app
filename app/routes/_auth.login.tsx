@@ -1,6 +1,5 @@
 import { Form, Link, useActionData } from '@remix-run/react';
 import { json, redirect, type ActionFunctionArgs } from '@remix-run/cloudflare';
-import { compare } from 'bcryptjs';
 import { LockIcon, MailIcon } from 'lucide-react';
 import { z } from 'zod';
 import { Button } from '~/components/ui/button';
@@ -13,7 +12,7 @@ export function meta() {
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
-	const { db, sessions } = context;
+	const { sessions, repo } = context;
 	const session = await sessions.getSession(request.headers.get('Cookie'));
 	if (session.has('userId')) {
 		return redirect('/');
@@ -26,20 +25,12 @@ export async function action({ request, context }: ActionFunctionArgs) {
 			password: z.string(),
 		})
 		.refine(async ({ email, password }) => {
-			const user = await db.query.users.findFirst({
-				columns: { id: true, password: true },
-				where: (users, { eq }) => eq(users.email, email),
-			});
-			if (!user) {
+			const userId = await repo.users.verify({ email, password });
+			if (!userId) {
 				return false;
 			}
 
-			const isPasswordValid = await compare(password, user.password);
-			if (!isPasswordValid) {
-				return false;
-			}
-
-			session.set('userId', user.id);
+			session.set('userId', userId);
 
 			return true;
 		}, 'Unable to login');
