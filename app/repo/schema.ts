@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 import { relations, sql } from 'drizzle-orm';
 import { linkTypes } from '~/constants';
 
@@ -14,17 +14,23 @@ export const users = sqliteTable('users', {
 		.default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const links = sqliteTable('links', {
-	id: integer('id').primaryKey(),
-	url: text('url').notNull(),
-	type: text('name', { enum: linkTypes }).notNull(),
-	userId: integer('user_id')
-		.notNull()
-		.references(() => users.id, { onDelete: 'cascade' }),
-	createdAt: text('created_at')
-		.notNull()
-		.default(sql`CURRENT_TIMESTAMP`),
-});
+export const links = sqliteTable(
+	'links',
+	{
+		id: integer('id').primaryKey(),
+		url: text('url').notNull(),
+		type: text('type', { enum: linkTypes }).notNull(),
+		userId: integer('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		createdAt: text('created_at')
+			.notNull()
+			.default(sql`CURRENT_TIMESTAMP`),
+	},
+	(t) => ({
+		uniqueUserLinkType: unique().on(t.type, t.userId),
+	}),
+);
 
 export const linkRelations = relations(links, ({ one }) => ({
 	user: one(users, { fields: [links.userId], references: [users.id] }),
