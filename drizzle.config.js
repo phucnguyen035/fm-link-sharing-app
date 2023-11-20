@@ -4,7 +4,7 @@ dotenv.config();
 /** @type {import('drizzle-kit').Config} */
 export default {
 	driver: 'd1',
-	schema: './app/schemas/*',
+	schema: './app/repo/schema.ts',
 	out: './drizzle',
 	dbCredentials: {
 		wranglerConfigPath: './wrangler.toml',
