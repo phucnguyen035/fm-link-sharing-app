@@ -1,7 +1,9 @@
-import { createCookie, createWorkersKVSessionStorage, logDevReady } from '@remix-run/cloudflare';
+import type { createWorkersKVSessionStorage } from '@remix-run/cloudflare';
+import { logDevReady } from '@remix-run/cloudflare';
 import { createPagesFunctionHandler } from '@remix-run/cloudflare-pages';
 import * as build from '@remix-run/dev/server-build';
 import { createRepository, type Repository } from '~/repo';
+import { createSessionStorage } from '~/session.server';
 
 declare module '@remix-run/cloudflare' {
 	interface AppLoadContext {
@@ -26,20 +28,8 @@ export const onRequest = createPagesFunctionHandler({
 		const env = context.env as ENV;
 		return {
 			repo: createRepository(env.DB),
-			sessions: createWorkersKVSessionStorage({
-				kv: env.SESSIONS,
-				cookie: createCookie('__session', {
-					httpOnly: true,
-					secure: process.env.NODE_ENV === 'production',
-					secrets: [env.SESSION_SECRET],
-					expires: getFutureDate(7),
-				}),
-			}),
+			sessions: createSessionStorage(env.SESSIONS, env.SESSION_SECRET),
 		};
 	},
 	mode: build.mode,
 });
-
-function getFutureDate(days: number) {
-	return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-}
