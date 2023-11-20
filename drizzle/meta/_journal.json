@@ -8,6 +8,13 @@
       "when": 1699981936810,
       "tag": "0000_oval_mister_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1700459913065,
+      "tag": "0001_skinny_shadow_king",
+      "breakpoints": true
     }
   ]
 }
