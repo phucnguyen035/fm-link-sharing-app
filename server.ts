@@ -3,11 +3,11 @@ import { createPagesFunctionHandler } from '@remix-run/cloudflare-pages';
 import * as build from '@remix-run/dev/server-build';
 import type { DrizzleD1Database } from 'drizzle-orm/d1';
 import { drizzle } from 'drizzle-orm/d1';
-import { schemas } from '~/schemas';
+import * as schema from '~/schemas';
 
 declare module '@remix-run/cloudflare' {
 	interface AppLoadContext {
-		db: DrizzleD1Database<typeof schemas>;
+		db: DrizzleD1Database<typeof schema>;
 		sessions: ReturnType<typeof createWorkersKVSessionStorage<{ userId: number }>>;
 	}
 }
@@ -29,7 +29,7 @@ export const onRequest = createPagesFunctionHandler({
 		return {
 			env,
 			db: drizzle(env.DB, {
-				schema: schemas,
+				schema,
 				logger: process.env.NODE_ENV === 'development',
 			}),
 			sessions: createWorkersKVSessionStorage({
