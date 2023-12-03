@@ -5,7 +5,7 @@ kv_namespaces = [
 	{ binding = "SESSIONS", preview_id = "7eea01754c9c422bb241437845b5b894", id = "4fbbd03a12a84a448d6197324eb4d553" }
 ]
 
-[[ d1_databases ]]
+[[d1_databases]]
 binding = "DB"
 database_name = "fm_link_sharing"
 database_id = "35ec0f36-c359-43f5-ae94-f45d52f35a4f"
