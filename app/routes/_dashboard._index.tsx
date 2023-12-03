@@ -1,6 +1,5 @@
 import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-run/cloudflare';
 import { Form, useActionData, useLoaderData } from '@remix-run/react';
-import { z } from 'zod';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
@@ -11,9 +10,11 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '~/components/ui/select';
-import { PLATFORMS, type Platform } from '~/constants';
 import { requireUserId } from '~/session.server';
-import { isUniqueConstraintError } from '~/lib/error';
+import { runGetUserLinksUseCase } from '~/use-cases/getUserLinks';
+import { runCreateAvailablePlatformsUseCase } from '~/use-cases/createAvailablePlatforms';
+import { validateFormSchema } from '~/lib/validate';
+import { createLinkRequestSchema, runCreateLinkUseCase } from '~/use-cases/createLink';
 
 export function meta() {
 	return [
@@ -27,15 +28,10 @@ export function meta() {
 
 export async function loader({ context, request }: LoaderFunctionArgs) {
 	const userId = await requireUserId(request, context.sessions);
-	const links = await context.repo.links.getByUserId(userId);
+	const links = await runGetUserLinksUseCase(context.repo.links)(userId);
+	const availablePlatforms = await runCreateAvailablePlatformsUseCase()(links);
 
-	const availablePlatforms = PLATFORMS.map((platform) => ({
-		value: platform,
-		label: getPlatformLabel(platform),
-		disabled: links.some((link) => link.platform === platform),
-	}));
-
-	return json({ links: await context.repo.links.getByUserId(userId), availablePlatforms });
+	return json({ links, availablePlatforms });
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
@@ -43,44 +39,36 @@ export async function action({ request, context }: ActionFunctionArgs) {
 		requireUserId(request, context.sessions),
 		request.formData(),
 	]);
-	const schema = z.object({
-		platform: z.enum(PLATFORMS),
-		url: z.string().url(),
-	});
 
-	const result = await schema.spa(Object.fromEntries(formData));
-	if (!result.success) {
-		return json({ errors: result.error.flatten() }, { status: 400 });
+	const validateResult = await validateFormSchema(createLinkRequestSchema, formData);
+	if (!validateResult.success) {
+		return json({ errors: validateResult.errors }, { status: 400 });
 	}
 
-	try {
-		await context.repo.links.create({
-			userId,
-			platform: result.data.platform,
-			url: result.data.url,
-		});
-
-		return null;
-	} catch (error) {
-		type ErrResponse = z.typeToFlattenedError<z.infer<typeof schema>>;
-		const errors: ErrResponse = {
-			fieldErrors: {},
-			formErrors: [],
-		};
-
-		if (isUniqueConstraintError(error)) {
-			errors.formErrors.push('Platform link already exists.');
-			return json({ errors }, { status: 400 });
-		}
-
-		errors.formErrors.push('Something went wrong. Please try again.');
-		return json({ errors }, { status: 500 });
+	const createLinkResult = await runCreateLinkUseCase(context.repo.links)(
+		userId,
+		validateResult.data,
+	);
+	if (!createLinkResult.success) {
+		return json({ errors: createLinkResult.errors }, { status: 400 });
 	}
+
+	return json({ success: true }, { status: 201 });
 }
 
 export default function Index() {
 	const { links, availablePlatforms } = useLoaderData<typeof loader>();
-	const data = useActionData<typeof action>();
+	const actionData = useActionData<typeof action>();
+
+	function hasActionError(
+		data: typeof actionData,
+	): data is Extract<typeof actionData, { errors: { _errors: string[] } }> {
+		if (!actionData) {
+			return false;
+		}
+
+		return 'errors' in actionData;
+	}
 
 	return (
 		<main>
@@ -115,6 +103,12 @@ export default function Index() {
 							))}
 						</SelectContent>
 					</Select>
+
+					{hasActionError(actionData) && actionData.errors.platform && (
+						<span className="text-xs font-semibold text-destructive">
+							{actionData.errors.platform._errors.at(0)}
+						</span>
+					)}
 				</div>
 				<div>
 					<Label>URL</Label>
@@ -125,47 +119,11 @@ export default function Index() {
 						placeholder="e.g. https://github.com/phucnguyen035"
 					/>
 				</div>
-				{data?.errors?.formErrors && (
-					<p className="text-xs font-medium text-red-500">{data.errors.formErrors[0]}</p>
+				{hasActionError(actionData) && (
+					<p className="text-xs font-medium text-red-500">{actionData.errors._errors.at(0)}</p>
 				)}
 				<Button>Submit</Button>
 			</Form>
 		</main>
 	);
-}
-
-function getPlatformLabel(platform: Platform) {
-	switch (platform) {
-		case 'github':
-			return 'GitHub';
-		case 'gitlab':
-			return 'GitLab';
-		case 'devto':
-			return 'Dev.to';
-		case 'hashnode':
-			return 'Hashnode';
-		case 'twitch':
-			return 'Twitch';
-		case 'youtube':
-			return 'YouTube';
-		case 'facebook':
-			return 'Facebook';
-		case 'twitter':
-			return 'Twitter';
-		case 'linkedin':
-			return 'LinkedIn';
-		case 'codepen':
-			return 'CodePen';
-		case 'codewars':
-			return 'CodeWars';
-		case 'freecodecamp':
-			return 'FreeCodeCamp';
-		case 'frontendmentor':
-			return 'Frontend Mentor';
-		case 'stackoverflow':
-			return 'Stack Overflow';
-		default:
-			const value: never = platform;
-			throw new Error(`Unexpected value: ${value}`);
-	}
 }
