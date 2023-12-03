@@ -14,7 +14,7 @@ export function runLoginCase(userRepo: Repository['users']) {
 		password: string,
 	): Promise<UseCaseResult<{ id: number }>> {
 		const user = await userRepo.findCredentialsByEmail(email);
-		const valid = await compare(user?.password ?? '', password);
+		const valid = await compare(password, user?.password ?? '');
 		if (!valid || !user) {
 			return {
 				success: false,
