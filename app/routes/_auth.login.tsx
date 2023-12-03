@@ -90,7 +90,9 @@ export default function LoginPage() {
 						)}
 					</div>
 					{!!data?.errors && (
-						<span className="text-xs text-destructive">{data.errors._errors.at(0)}</span>
+						<span className="text-xs font-semibold text-destructive">
+							{data.errors._errors.at(0)}
+						</span>
 					)}
 					<Button type="submit" className="w-full">
 						Login
