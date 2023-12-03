@@ -23,6 +23,8 @@ export async function loader({ request, context }: LoaderFunctionArgs) {
 	if (session.has('userId')) {
 		return redirect('/');
 	}
+
+	return null;
 }
 
 export async function action({ request, context }: ActionFunctionArgs) {
