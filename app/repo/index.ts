@@ -1,17 +1,22 @@
-import { compare, hash } from 'bcryptjs';
-import { drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
-import { type LinkType } from '~/constants';
+import { drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
+import { type Platform } from '~/constants';
 import * as schema from './schema';
 
 export type Repository = {
 	users: {
-		exists(email: string): Promise<boolean>;
-		create(user: { email: string; password: string }): Promise<number>;
-		verify(user: { email: string; password: string }): Promise<number | undefined>;
+		create(email: string, password: string): Promise<number>;
+		findCredentialsByEmail: (
+			email: string,
+		) => Promise<{ id: number; password: string } | undefined>;
 	};
 	links: {
-		get(userId: number): Promise<Array<{ id: number; url: string; type: LinkType }>>;
+		getByUserId(userId: number): Promise<Array<{ id: number; url: string; platform: Platform }>>;
+		create(data: {
+			userId: number;
+			url: string;
+			platform: Platform;
+		}): Promise<{ id: number; url: string; platform: Platform }>;
 	};
 };
 
@@ -30,35 +35,18 @@ function createUserRepo(db: Database): Repository['users'] {
 	const { users } = schema;
 
 	return {
-		async create({ email, password }) {
-			const user = await db
-				.insert(users)
-				.values({ email, password: await hash(password, 8) })
-				.returning({ id: users.id });
-
-			return user[0].id;
+		async create(email, password) {
+			const [user] = await db.insert(users).values({ email, password }).returning({ id: users.id });
+			return user.id;
 		},
-		async exists(email) {
-			const user = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
-
-			return user.length > 0;
-		},
-		async verify({ email, password }) {
-			const [user] = await db
+		async findCredentialsByEmail(email) {
+			const userCredentials = await db
 				.select({ id: users.id, password: users.password })
 				.from(users)
 				.where(eq(users.email, email))
 				.limit(1);
-			if (!user) {
-				return;
-			}
 
-			const isPasswordValid = await compare(password, user.password);
-			if (!isPasswordValid) {
-				return;
-			}
-
-			return user.id;
+			return userCredentials.at(0);
 		},
 	};
 }
@@ -67,15 +55,23 @@ function createLinkRepo(db: Database): Repository['links'] {
 	const { links } = schema;
 
 	return {
-		async get(userId) {
+		async getByUserId(userId) {
 			return await db
 				.select({
 					id: links.id,
 					url: links.url,
-					type: links.type,
+					platform: links.platform,
 				})
 				.from(links)
 				.where(eq(links.userId, userId));
+		},
+		async create(data) {
+			const [link] = await db
+				.insert(links)
+				.values(data)
+				.returning({ id: links.id, url: links.url, platform: links.platform });
+
+			return link;
 		},
 	};
 }
