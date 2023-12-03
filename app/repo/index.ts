@@ -1,6 +1,7 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
 import { type Platform } from '~/constants';
+import { type Link } from '~/models/link';
 import * as schema from './schema';
 
 export type Repository = {
@@ -11,12 +12,9 @@ export type Repository = {
 		) => Promise<{ id: number; password: string } | undefined>;
 	};
 	links: {
-		getByUserId(userId: number): Promise<Array<{ id: number; url: string; platform: Platform }>>;
-		create(data: {
-			userId: number;
-			url: string;
-			platform: Platform;
-		}): Promise<{ id: number; url: string; platform: Platform }>;
+		getByUserId(userId: number): Promise<Link[]>;
+		exists(userId: number, platform: Platform): Promise<boolean>;
+		create(data: { userId: number; url: string; platform: Platform }): Promise<Link>;
 	};
 };
 
@@ -64,6 +62,15 @@ function createLinkRepo(db: Database): Repository['links'] {
 				})
 				.from(links)
 				.where(eq(links.userId, userId));
+		},
+		async exists(userId, platform) {
+			const existingLinks = await db
+				.select({ id: links.id })
+				.from(links)
+				.where(and(eq(links.userId, userId), eq(links.platform, platform)))
+				.limit(1);
+
+			return existingLinks.length > 0;
 		},
 		async create(data) {
 			const [link] = await db
