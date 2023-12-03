@@ -1,54 +1,58 @@
-import { json, redirect, type ActionFunctionArgs } from '@remix-run/cloudflare';
+import {
+	json,
+	redirect,
+	type LoaderFunctionArgs,
+	type ActionFunctionArgs,
+} from '@remix-run/cloudflare';
 import { Form, Link, useActionData } from '@remix-run/react';
 import { LockIcon, MailIcon } from 'lucide-react';
-import { z } from 'zod';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
+import { validateFormSchema } from '~/lib/validate';
+import {
+	MIN_PASSWORD_LENGTH,
+	registerRequestSchema,
+	runRegisterUseCase,
+} from '~/use-cases/register';
 
-const MIN_PASSWORD_LENGTH = 8;
-
-export async function action({ request, context }: ActionFunctionArgs) {
-	const { sessions, repo } = context;
+export async function loader({ request, context }: LoaderFunctionArgs) {
+	const { sessions } = context;
 	const session = await sessions.getSession(request.headers.get('Cookie'));
 	if (session.has('userId')) {
 		return redirect('/');
 	}
+}
 
+export async function action({ request, context }: ActionFunctionArgs) {
+	const session = await context.sessions.getSession(request.headers.get('Cookie'));
 	const formData = await request.formData();
-	const schema = z
-		.object({
-			email: z.string().email(),
-			password: z.string().min(MIN_PASSWORD_LENGTH),
-			confirmPassword: z.string().min(MIN_PASSWORD_LENGTH),
-		})
-		.refine((data) => data.password === data.confirmPassword, {
-			path: ['confirmPassword'],
-			message: 'Passwords do not match',
-		})
-		.refine(async ({ email }) => {
-			const userExists = await repo.users.exists(email);
-			return !userExists;
-		}, 'Failed to sign up');
-
-	const result = await schema.spa(Object.fromEntries(formData));
+	const result = await validateFormSchema(registerRequestSchema, formData);
 	if (!result.success) {
-		return json({ errors: result.error.flatten() }, { status: 400 });
+		return json({ errors: result.errors }, { status: 400 });
 	}
 
-	session.set('userId', await repo.users.create(result.data));
+	const registerResult = await runRegisterUseCase(context.repo.users)(
+		result.data.email,
+		result.data.password,
+	);
+	if (!registerResult.success) {
+		return json({ errors: registerResult.errors }, { status: 400 });
+	}
+
+	session.set('userId', registerResult.data.id);
 
 	return redirect('/', {
 		headers: {
-			'set-cookie': await sessions.commitSession(session),
+			'set-cookie': await context.sessions.commitSession(session),
 		},
 	});
 }
 
 export default function RegisterPage() {
 	const data = useActionData<typeof action>();
-	const hasFormErrors = !!data?.errors?.formErrors.length;
+	const hasFormErrors = !!data?.errors._errors.length;
 
 	return (
 		<Form method="POST">
@@ -67,10 +71,14 @@ export default function RegisterPage() {
 							placeholder="e.g. alex@email.com"
 							name="email"
 							icon={<MailIcon className="h-4 w-4 text-muted-foreground" />}
-							error={data?.errors.fieldErrors.email || hasFormErrors}
+							error={data && 'email' in data?.errors ? !!data.errors.email?._errors : hasFormErrors}
 						/>
-						{data?.errors.fieldErrors.email && (
-							<span className="text-xs text-destructive">{data.errors.fieldErrors.email[0]}</span>
+						{data && (
+							<span className="text-xs text-destructive">
+								{'email' in data.errors
+									? data.errors.email?._errors.at(0)
+									: data.errors._errors.at(0)}
+							</span>
 						)}
 					</div>
 					<div>
@@ -83,11 +91,15 @@ export default function RegisterPage() {
 							placeholder="At least 8 characters"
 							name="password"
 							icon={<LockIcon className="h-4 w-4 text-muted-foreground" />}
-							error={data?.errors.fieldErrors.password || hasFormErrors}
+							error={
+								data && 'password' in data?.errors ? !!data.errors.password?._errors : hasFormErrors
+							}
 						/>
-						{data?.errors.fieldErrors.password && (
+						{data && (
 							<span className="text-xs text-destructive">
-								{data.errors.fieldErrors.password?.[0]}
+								{'password' in data.errors
+									? data.errors.password?._errors.at(0)
+									: data.errors._errors.at(0)}
 							</span>
 						)}
 					</div>
@@ -101,17 +113,20 @@ export default function RegisterPage() {
 							placeholder="At least 8 characters"
 							name="confirmPassword"
 							icon={<LockIcon className="h-4 w-4 text-muted-foreground" />}
-							error={data?.errors.fieldErrors.confirmPassword || hasFormErrors}
+							error={
+								data && 'confirmPassword' in data?.errors
+									? !!data.errors.confirmPassword?._errors
+									: hasFormErrors
+							}
 						/>
-						{data?.errors.fieldErrors.confirmPassword && (
+						{data && (
 							<span className="text-xs text-destructive">
-								{data.errors.fieldErrors.confirmPassword?.[0]}
+								{'confirmPassword' in data.errors
+									? data.errors.confirmPassword?._errors.at(0)
+									: data.errors._errors.at(0)}
 							</span>
 						)}
 					</div>
-					{hasFormErrors && (
-						<span className="text-xs text-destructive">{data.errors.formErrors[0]}</span>
-					)}
 					<Button type="submit" className="w-full">
 						Sign up
 					</Button>

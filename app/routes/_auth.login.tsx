@@ -1,48 +1,47 @@
-import { Form, Link, useActionData } from '@remix-run/react';
 import { json, redirect, type ActionFunctionArgs } from '@remix-run/cloudflare';
+import { Form, Link, useActionData } from '@remix-run/react';
 import { LockIcon, MailIcon } from 'lucide-react';
-import { z } from 'zod';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
+import { validateFormSchema } from '~/lib/validate';
+import { loginRequestSchema, runLoginCase } from '~/use-cases/login';
 
 export function meta() {
 	return [{ title: 'Login' }, { name: 'description', content: 'Login to Link Sharing App' }];
 }
 
-export async function action({ request, context }: ActionFunctionArgs) {
-	const { sessions, repo } = context;
-	const session = await sessions.getSession(request.headers.get('Cookie'));
+export async function loader({ request, context }: ActionFunctionArgs) {
+	const session = await context.sessions.getSession(request.headers.get('Cookie'));
 	if (session.has('userId')) {
 		return redirect('/');
 	}
 
+	return null;
+}
+
+export async function action({ request, context }: ActionFunctionArgs) {
+	const session = await context.sessions.getSession(request.headers.get('Cookie'));
 	const formData = await request.formData();
-	const schema = z
-		.object({
-			email: z.string().email(),
-			password: z.string(),
-		})
-		.refine(async ({ email, password }) => {
-			const userId = await repo.users.verify({ email, password });
-			if (!userId) {
-				return false;
-			}
-
-			session.set('userId', userId);
-
-			return true;
-		}, 'Unable to login');
-
-	const result = await schema.spa(Object.fromEntries(formData));
-	if (!result.success) {
-		return json({ errors: result.error.flatten() }, { status: 400 });
+	const validateResult = await validateFormSchema(loginRequestSchema, formData);
+	if (!validateResult.success) {
+		return json({ errors: validateResult.errors }, { status: 400 });
 	}
+
+	const loginResult = await runLoginCase(context.repo.users)(
+		validateResult.data.email,
+		validateResult.data.password,
+	);
+	if (!loginResult.success) {
+		return json({ errors: loginResult.errors }, { status: 400 });
+	}
+
+	session.set('userId', loginResult.data.id);
 
 	return redirect('/', {
 		headers: {
-			'set-cookie': await sessions.commitSession(session),
+			'set-cookie': await context.sessions.commitSession(session),
 		},
 	});
 }
@@ -67,10 +66,10 @@ export default function LoginPage() {
 							placeholder="e.g. alex@email.com"
 							name="email"
 							icon={<MailIcon className="h-4 w-4 text-muted-foreground" />}
-							error={data?.errors.fieldErrors.email || data?.errors.formErrors}
+							error={!!data?.errors}
 						/>
-						{data?.errors.fieldErrors.email && (
-							<span className="text-xs text-destructive">{data.errors.fieldErrors.email[0]}</span>
+						{data && 'email' in data.errors && (
+							<span className="text-xs text-destructive">{data.errors.email?._errors.at(0)}</span>
 						)}
 					</div>
 					<div>
@@ -82,16 +81,16 @@ export default function LoginPage() {
 							placeholder="Enter your password"
 							name="password"
 							icon={<LockIcon className="h-4 w-4 text-muted-foreground" />}
-							error={data?.errors.fieldErrors.password || data?.errors.formErrors}
+							error={!!data?.errors}
 						/>
-						{data?.errors.fieldErrors.password && (
+						{data && 'password' in data.errors && (
 							<span className="text-xs text-destructive">
-								{data.errors.fieldErrors.password?.[0]}
+								{data.errors.password?._errors.at(0)}
 							</span>
 						)}
 					</div>
-					{data?.errors.formErrors && (
-						<span className="text-xs text-destructive">{data.errors.formErrors[0]}</span>
+					{!!data?.errors && (
+						<span className="text-xs text-destructive">{data.errors._errors.at(0)}</span>
 					)}
 					<Button type="submit" className="w-full">
 						Login
