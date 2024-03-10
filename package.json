@@ -11,6 +11,7 @@
   "dependencies": {
     "@lucia-auth/adapter-drizzle": "^1.0.2",
     "@node-rs/argon2": "^1.8.0",
+    "@node-rs/bcrypt": "^1.10.0",
     "@vercel/postgres": "^0.7.2",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.30.0",
