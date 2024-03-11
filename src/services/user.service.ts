@@ -15,7 +15,7 @@ export async function getUserByEmail(email: string) {
   });
 }
 
-export async function checkUserExists(email: string) {
+export async function hasExistingUser(email: string) {
   const user = await getUserByEmail(email);
   return !!user;
 }
@@ -23,10 +23,10 @@ export async function checkUserExists(email: string) {
 export async function createUser(email: string, password: string) {
   const hashedPassword = await argon2id.hash(password);
 
-  const [newUser] = await db
+  const [{ id }] = await db
     .insert(schema.users)
     .values({ email, password: hashedPassword })
     .returning({ id: schema.users.id });
 
-  return newUser.id;
+  return id;
 }
