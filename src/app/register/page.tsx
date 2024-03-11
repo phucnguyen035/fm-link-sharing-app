@@ -1,41 +1,44 @@
-import { login } from "@/services/auth.service";
-import { createUser, hasExistingUser } from "@/services/user.service";
-import { validateFormData } from "@/utils/validateFormData";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { z } from "zod";
-import RegisterForm from "./RegisterForm";
+"use client";
 
-const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-});
-
-async function register(_prevState: unknown, formData: FormData) {
-  "use server";
-
-  const result = validateFormData(formData, registerSchema);
-  if (!result.success) {
-    return { errors: result.errors };
-  }
-
-  if (await hasExistingUser(result.data.email)) {
-    return {
-      errors: {},
-    };
-  }
-
-  const userId = await createUser(result.data.email, result.data.password);
-  const sessionCookie = await login(userId);
-  await cookies().set(
-    sessionCookie.name,
-    sessionCookie.value,
-    sessionCookie.attributes
-  );
-
-  return redirect("/");
-}
+import { useFormState, useFormStatus } from "react-dom";
+import { register } from "./actions";
 
 export default function RegisterPage() {
-  return <RegisterForm action={register} />;
+  const [{ errors }, dispatch] = useFormState(register, {
+    errors: {},
+  });
+
+  return (
+    <div>
+      <h1>Register</h1>
+
+      <form noValidate action={dispatch}>
+        <div>
+          <label htmlFor="email">Email</label>
+          <input type="email" id="email" name="email" />
+          {errors?.email && (
+            <div className="text-red-500">{errors.email[0]}</div>
+          )}
+        </div>
+        <div>
+          <label htmlFor="password">Password</label>
+          <input type="password" id="password" name="password" />
+          {errors?.password && (
+            <div className="text-red-500">{errors.password[0]}</div>
+          )}
+        </div>
+        <SubmitButton />
+      </form>
+    </div>
+  );
+}
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button type="submit" disabled={pending}>
+      {pending ? "Loading" : "Register"}
+    </button>
+  );
 }
